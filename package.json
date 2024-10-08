@@ -13,6 +13,8 @@
     "@react-three/fiber": "^8.15.15",
     "@react-three/postprocessing": "^2.15.11",
     "@react-three/rapier": "^1.2.1",
+    "@zoom/videosdk": "^1.10.7",
+    "@zoom/videosdk-ui-toolkit": "^1.9.8",
     "gsap": "^3.12.5",
     "leva": "^0.9.35",
     "playroomkit": "^0.0.66",
