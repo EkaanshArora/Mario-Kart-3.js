@@ -1,6 +1,7 @@
+import uitoolkit from "@zoom/videosdk-ui-toolkit";
 import { Canvas } from "@react-three/fiber";
 import { Experience } from "./components/Experience";
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Physics } from "@react-three/rapier";
 import {
   Environment,
@@ -27,6 +28,7 @@ export const Controls = {
 };
 
 function App() {
+  const zoomRef = useRef(false);
   const map = useMemo(
     () => [
       { name: Controls.up, keys: ["KeyW", "ArrowUp"] },
@@ -43,10 +45,24 @@ function App() {
   );
 
   const { actions } = useStore();
-  const start = async () => {
-    await insertCoin({ skipLobby: true });
 
-    onPlayerJoin((state) => {
+  const startCall = async (name) => {
+    const topic = new URL(window.location.href).hash.replace("#r=", "");
+    if (zoomRef.current) return;
+    zoomRef.current = true;
+    const token = await generateSignature(topic, 1, sdkKey, sdkSecret);
+    uitoolkit.joinSession(document.getElementById("sessionContainer"), {
+      videoSDKJWT: token,
+      sessionName: topic,
+      userName: name,
+      sessionPasscode: "",
+      features: ["video", "audio"],
+    });
+  };
+  const start = async () => {
+    await insertCoin();
+
+    onPlayerJoin(async (state) => {
       actions.addPlayer(state);
 
       actions.setId(state.id);
@@ -54,6 +70,7 @@ function App() {
       state.onQuit(() => {
         actions.removePlayer(state);
       });
+      await startCall(state.getProfile().name);
     });
   };
 
@@ -88,8 +105,40 @@ function App() {
           </Physics>
         </Suspense>
       </Canvas>
+      <div
+        id="sessionContainer"
+        className="absolute w-[400px] h-[600px]"
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          zIndex: 1000,
+          width: 200,
+          height: 850,
+        }}
+      />
     </>
   );
+}
+
+async function generateSignature(sessionName, role) {
+  try {
+    const request = await fetch("https://", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionName,
+        role,
+      }),
+    });
+    const json = await request.json();
+    const sdkJWT = json.signature;
+    return sdkJWT;
+  } catch (e) {
+    return null;
+  }
 }
 
 export default App;
